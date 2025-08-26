@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   collection,
@@ -11,43 +11,45 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-// ---- Types Firestore (sans id) et côté UI (avec id)
+// Types
 type ProviderCore = {
   name: string;
   verified: boolean;
   experienceYears: number;
   ratingAvg?: number;
   priceFrom: number;
-  categories: string[]; // indispensable pour le where("categories", "array-contains", ...)
+  categories: string[];
 };
-
 type Provider = ProviderCore & { id: string };
 
-export default function ServicePage({ params }: { params: { code: string } }) {
+// 👇 NOTE: params est un Promise en Next 15
+export default function ServicePage({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
+  // On "unwrap" le Promise grâce à React.use()
+  const { code } = use(params);
+
   const [providers, setProviders] = useState<Provider[]>([]);
 
   useEffect(() => {
     (async () => {
-      // On typ e explicitement la collection pour éviter tout "any"
       const providersCol = collection(db, "providers") as CollectionReference<ProviderCore>;
-      const q = query(
-        providersCol,
-        where("categories", "array-contains", params.code)
-      );
-
-      const snap = await getDocs(q); // => QuerySnapshot<ProviderCore>
+      const q = query(providersCol, where("categories", "array-contains", code));
+      const snap = await getDocs(q);
       const rows: Provider[] = snap.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data(), // data() est bien typé ProviderCore
+        ...doc.data(),
       }));
       setProviders(rows);
     })();
-  }, [params.code]);
+  }, [code]);
 
   return (
     <section>
       <h2 className="text-xl font-semibold mb-4">
-        Prestataires — {params.code}
+        Prestataires — {code}
       </h2>
 
       <ul className="space-y-3">
