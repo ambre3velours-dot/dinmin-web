@@ -11,7 +11,6 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-/** Types Firestore (sans id) */
 type ProviderCore = {
   name: string;
   verified: boolean;
@@ -21,15 +20,10 @@ type ProviderCore = {
   categories: string[];
 };
 
-/** Type pour l’UI (avec id) */
 type Provider = ProviderCore & { id: string };
 
-/**
- * ⚠️ Next 15 tape maintenant `params` comme un Promise.
- * On prend `props: any` pour ne pas se battre avec les définitions internes,
- * puis on "unwrap" proprement avec React.use().
- */
 export default function ServicePage(props: any) {
+  // Next 15: params est un Promise côté build -> on unwrap avec use()
   const { code } = use(props.params as Promise<{ code: string }>);
 
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -38,18 +32,13 @@ export default function ServicePage(props: any) {
   useEffect(() => {
     (async () => {
       try {
-        const providersCol = collection(
+        const col = collection(
           db,
           "providers"
         ) as CollectionReference<ProviderCore>;
-
-        const q = query(providersCol, where("categories", "array-contains", code));
+        const q = query(col, where("categories", "array-contains", code));
         const snap = await getDocs(q);
-        const rows: Provider[] = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setProviders(rows);
+        setProviders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } finally {
         setLoading(false);
       }
@@ -63,7 +52,9 @@ export default function ServicePage(props: any) {
       {loading ? (
         <p className="text-sm text-gray-600">Chargement…</p>
       ) : providers.length === 0 ? (
-        <p className="text-sm text-gray-600">Aucun prestataire trouvé pour cette catégorie.</p>
+        <p className="text-sm text-gray-600">
+          Aucun prestataire trouvé pour cette catégorie.
+        </p>
       ) : (
         <ul className="space-y-3">
           {providers.map((p) => (
@@ -81,7 +72,8 @@ export default function ServicePage(props: any) {
                   )}
                 </div>
                 <div className="text-sm text-gray-600">
-                  {(p.ratingAvg ?? 0).toFixed(1)} ★ • {p.experienceYears} ans exp. • dès {p.priceFrom} CFA
+                  {(p.ratingAvg ?? 0).toFixed(1)} ★ • {p.experienceYears} ans
+                  exp. • dès {p.priceFrom} CFA
                 </div>
               </div>
 
@@ -98,7 +90,3 @@ export default function ServicePage(props: any) {
     </section>
   );
 }
-cd dinmin-web-app
-git add src/app/service/[code]/page.tsx
-git commit -m "fix(next15): unwrap params with use() and relax prop typing"
-git push origin main

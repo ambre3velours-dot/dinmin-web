@@ -1,35 +1,55 @@
+"use client";
+
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-export default function Home() {
+type Provider = {
+  id: string;
+  name: string;
+  verified: boolean;
+  experienceYears: number;
+  ratingAvg: number;
+  priceFrom: number;
+};
+
+export default function ServicePage(props: { params: Promise<{ code: string }> }) {
+  const { code } = use(props.params); // ✅ Next.js 15: unwrap params with use()
+  const [providers, setProviders] = useState<Provider[]>([]);
+
+  useEffect(() => {
+    const fetchProviders = async () => {
+      const snap = await getDocs(
+        query(collection(db, "providers"), where("categories", "array-contains", code))
+      );
+      setProviders(snap.docs.map(d => ({ id: d.id, ...(d.data() as Provider) })));
+    };
+    fetchProviders();
+  }, [code]);
+
   return (
-    <section className="space-y-6">
-      <div className="bg-[#F5E8D3] rounded-2xl p-6">
-        <h1 className="text-2xl font-semibold text-[#273469]">
-          Trouvez le bon service, au bon moment.
-        </h1>
-        <p className="mt-2">Prestataires vérifiés. Paiement sécurisé.</p>
-        <Link
-          href="/catalog"
-          className="inline-block mt-4 bg-[#FF715B] text-white px-4 py-2 rounded-lg"
-        >
-          Voir le catalogue
-        </Link>
-      </div>
-
-      <ul className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {[
-          ["MA-01", "Ménage"],
-          ["TR-01", "Plomberie"],
-          ["TR-03", "Serrurerie"],
-          ["LI-01", "Livraisons"],
-          ["FA-01", "Baby-sitting"],
-          ["TR-06", "Bricolage"],
-        ].map(([code, name]) => (
-          <li key={code} className="bg-white rounded-xl p-4 shadow">
-            <div className="font-medium">{name}</div>
+    <section>
+      <h2 className="text-xl font-semibold mb-4">Prestataires – {code}</h2>
+      <ul className="space-y-3">
+        {providers.map((p) => (
+          <li key={p.id} className="bg-white rounded-xl p-4 shadow flex items-center justify-between">
+            <div>
+              <div className="font-medium">
+                {p.name}{" "}
+                {p.verified && (
+                  <span className="ml-2 text-xs bg-teal-600 text-white px-2 py-0.5 rounded">
+                    vérifié
+                  </span>
+                )}
+              </div>
+              <div className="text-sm text-gray-600">
+                {p.ratingAvg?.toFixed(1)} ★ · {p.experienceYears} ans exp. · dès {p.priceFrom} CFA
+              </div>
+            </div>
             <Link
-              className="text-sm text-[#273469] underline mt-2 inline-block"
-              href={`/service/${code}`}
+              href={`/provider/${p.id}`}
+              className="text-sm bg-[#273469] text-white px-3 py-1.5 rounded"
             >
               Voir
             </Link>
